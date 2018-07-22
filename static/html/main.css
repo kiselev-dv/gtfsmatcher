@@ -1,0 +1,67 @@
+body, html {
+	width: 100%;
+	height: 100%;
+	margin: 0 0 0 0;
+}
+
+.col {
+	float: left;
+	height: 100%;
+}
+.tabs {
+	height: 80px;
+}
+.tab {
+	top: 80px;
+	position: absolute;
+	bottom: 0px;
+	width: inherit;
+}
+.scroll-wrapper {
+	height: 100%;
+	overflow-y: auto;
+}
+.compact {
+	width: 30%;
+}
+.wide {
+	width: 70%;
+}
+
+#mapid {
+	float: left;
+	height: 100%;'
+}
+
+.row {
+	width: 100%;
+	height: 100%;
+}
+
+.row:after {
+	content: "";
+	display: table;
+	clear: both;
+}
+
+.matched {
+	background-color: #C9FF8C;
+}
+
+.details {
+	margin-bottom: 10px;
+	background-color: #fafafa;
+	padding: 10px;
+}
+.trip a {
+	margin-right: 5px;
+	display: inline-block;
+}
+
+table {
+	width: 100%;
+}
+
+input {
+	width: 100%;
+}

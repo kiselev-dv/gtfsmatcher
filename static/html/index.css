@@ -1,0 +1,97 @@
+body, html {
+	width: 100%;
+	height: 100%;
+	margin: 0 0 0 0;
+}
+
+/* Horizontal site division */
+.content {
+	display: flex;
+	width: 100%;
+	height: 100%;
+}
+
+.side {
+    flex: 0 1 auto;
+    min-width: 0px;
+    min-height: 0px;
+    display: flex;
+    flex-direction: column;
+}
+
+.map {
+    flex: 1 0 auto;
+    min-width: 0px;
+    min-height: 0px;
+}
+
+.compact {
+	width: 30%;
+}
+.wide {
+	width: 60%;
+}
+
+/* end Horizontal site division */
+
+/* Sidebar vertical division */
+.side-header {
+    flex: 0 1 auto;
+    min-height: 0px;
+}
+
+.side-content {
+    flex: 1 0;
+	min-height: 0px;
+	padding: 5px 0px 5px 5px;
+}
+
+.side-content-scroll {
+	width: 100%;
+    height: 100%;
+    overflow-y: auto;
+}
+/* end Sidebar vertical division */
+
+.tabs span {
+	padding: 5px 5px 1px 5px;
+}
+
+.tabs span:hover {
+	border-bottom: 3px solid #666;
+	cursor: pointer;
+}
+
+.tab-selector span.active {
+	border-bottom: 3px solid #444;
+}
+
+div[ng-click] {
+	cursor: pointer;
+}
+
+.matched {
+	background-color: #C9FF8C;
+}
+
+.details {
+	margin-bottom: 10px;
+	background-color: #fafafa;
+	padding: 10px;
+}
+.trip a {
+	margin-right: 5px;
+	margin-bottom: 5px;
+	display: inline-block;
+}
+.trip a:hover {
+	box-shadow: 3px 3px 4px rgba(0,0,0,0.5);
+	cursor: pointer;
+}
+
+table {
+	width: 100%;
+}
+input {
+	width: 100%;
+}

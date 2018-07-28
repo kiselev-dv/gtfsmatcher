@@ -41,8 +41,10 @@ import me.osm.gtfsmatcher.util.SphericalMercator;
 
 public class StopAPI {
 	private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
-	private static final String urlBase = "https://overpass-api.de/api/interpreter?data=";
+	private static final String urlBase = "http://overpass-api.de/api/interpreter?data=";
 	private static final String qTemplate = "[out:json][timeout:25];(node[\"highway\"=\"bus_stop\"]({{bbox}}););out meta;>;out meta qt;";
+	
+	private static final String DATA_FOLDER = System.getProperty("data.dir", System.getProperty("user.dir") + "/data"); 
 
 	private static final StopsMatcher matcher = new DefaultStopsMatcher();
 	
@@ -167,7 +169,7 @@ public class StopAPI {
 	}
 
 	private static List<MatchedStop> readStopsFromGTFS() throws IOException {
-		try(ZipFile zipFile = new ZipFile("/home/dkiselev/osm/data/gtfs/google_transit.zip")) {
+		try(ZipFile zipFile = new ZipFile(DATA_FOLDER + "/google_transit.zip")) {
 			
 			Enumeration<? extends ZipEntry> entries = zipFile.entries();
 			

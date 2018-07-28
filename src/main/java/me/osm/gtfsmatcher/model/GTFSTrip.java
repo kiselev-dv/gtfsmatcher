@@ -14,6 +14,10 @@ public class GTFSTrip {
 	 * */
 	private OSMRelation route;
 
+	private OSMObject matchedOSMTrip;
+
+	private boolean exactMatch;
+
 	public GTFSTrip(String[] stops) {
 		this.stops = stops;
 	}
@@ -31,6 +35,26 @@ public class GTFSTrip {
 	@Override
 	public boolean equals(Object obj) {
 		return toString().equals(obj);
+	}
+
+	public String[] getStops() {
+		return stops;
+	}
+
+	public void setMatchedOSMTrip(OSMObject bestFitOSMTrip) {
+		this.matchedOSMTrip = bestFitOSMTrip;
+	}
+
+	public void setExactMatch(boolean exact) {
+		this.exactMatch = exact;
+	}
+
+	public OSMObject getMatchedOSMTrip() {
+		return matchedOSMTrip;
+	}
+
+	public boolean isExactMatch() {
+		return exactMatch;
 	}
 
 }

@@ -9,15 +9,20 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Enumeration;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVParser;
 import org.apache.commons.io.IOUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.restexpress.Request;
@@ -28,18 +33,19 @@ import com.vividsolutions.jts.geom.Envelope;
 import me.osm.gtfsmatcher.model.OSMObject;
 
 public class RoutesAPI {
-	
-	private static final String urlBase = "https://overpass-api.de/api/interpreter?data=";
-	private static final String qTemplate = "[out:json][timeout:25];("
-			+	 "relation[type=route_master]({{bbox}});"
-			+	 "relation[type=route][\"route\"~\"^(bus|tram|ferry|light_rail|trolleybus)$\"]({{bbox}});"
+
+	private static final String urlBase = "http://overpass-api.de/api/interpreter?data=";
+	private static final String qTemplate = "[out:json][timeout:25];(" + "relation[type=route_master]({{bbox}});"
+			+ "relation[type=route][\"route\"~\"^(bus|tram|ferry|light_rail|trolleybus)$\"]({{bbox}});"
 			+ ");out meta;>;out meta qt;";
-	
-	public Collection<GTFSRoute> read(Request req, Response res ) throws IOException {
+
+	private static final String DATA_FOLDER = System.getProperty("data.dir", System.getProperty("user.dir") + "/data");
+
+	public RoutesData read(Request req, Response res ) throws IOException {
 		
 		RoutesBuilder rb = new RoutesBuilder();
 		
-		try(ZipFile zipFile = new ZipFile("/home/dkiselev/osm/data/gtfs/google_transit.zip")) {
+		try(ZipFile zipFile = new ZipFile(DATA_FOLDER + "/google_transit.zip")) {
 			
 			Enumeration<? extends ZipEntry> entries = zipFile.entries();
 			
@@ -68,62 +74,126 @@ public class RoutesAPI {
 			}
 		}
 		
-		Collection<GTFSRoute> routes = rb.buildRoutes();
-		List<OSMObject> osmRoutes = getOSMRoutes(StopAPI.getEnvelope());
+		try {
+			Map<String, List<OSMObject>> routeRelations = new HashMap<>();
+			Map<String, GTFSRoute> routeGTFS = new HashMap<>();
+			
+			Collection<GTFSRoute> routes = rb.buildRoutes();
+			routes.forEach(r -> {
+				routeGTFS.put(r.getName(), r);
+			});
+			
+			OSMData osmData = getOSMRoutes(StopAPI.getEnvelope());
+			
+			osmData.listRelations().forEach(r -> {
+				if ("route".equals(r.getTags().get("type"))) {
+					String ref = r.getTags().get("ref");
+					if (ref != null) {
+						if(routeRelations.get(ref) == null) {
+							routeRelations.put(ref, new ArrayList<>());
+						}
+						routeRelations.get(ref).add(r);
+					}
+					else {
+						// Check for ref on route_master
+					}
+				}
+			});
+			
+			routeGTFS.values().forEach(gtfsRoute -> {
+				String name = gtfsRoute.getName();
+				List<OSMObject> osmTrips = routeRelations.remove(name);
+				if (osmTrips != null && !osmTrips.isEmpty()) {
+					osmTrips.forEach(t -> {
+						System.out.println("Matched: " + name + " with " + t.getId());
+					});
+				}
+				gtfsRoute.setTripCandidates(osmTrips);
+			});
 		
-		return routes;
+			System.out.println("OSM: orphants");
+			List<OSMObject> orphants = new ArrayList<>();
+			
+			routeRelations.values().forEach(orphants::addAll);
+			
+			Comparator<OSMObject> comparator = 
+					Comparator.comparingInt(r -> {
+						String alphaString = r.getTags().get("ref").replaceAll("\\D", "");
+						if (StringUtils.isBlank(alphaString)) {
+							return 0;
+						}
+						return Integer.parseInt(alphaString);
+					});
+			comparator = comparator.thenComparing(r -> r.getTags().get("ref").replaceAll("\\d", ""));
+			
+			Collections.sort(orphants, comparator);
+			orphants.forEach(o -> System.out.println(o.getTags().get("ref") + " " + o.getId()));
+
+			routes.forEach(r -> r.matchTrips(osmData));
+			
+			return new RoutesData(routes, orphants, osmData);
+		}
+		catch (Exception e) {
+			e.printStackTrace();
+			throw e;
+		}
 		
 	}
-	
-	private List<OSMObject> getOSMRoutes(Envelope env) throws IOException, MalformedURLException {
-		
+
+	private OSMData getOSMRoutes(Envelope env) throws IOException, MalformedURLException {
+
 		String overpassQ = getOverpassQ(env);
 		JSONObject overpassAnswer = new JSONObject(IOUtils.toString(new URL(urlBase + overpassQ).openStream()));
 		JSONArray elements = overpassAnswer.optJSONArray("elements");
-		
-		List<OSMObject> data = new ArrayList<>();
-		
+
+		OSMData data = new OSMData();
+
 		for (int i = 0; i < elements.length(); i++) {
 			JSONObject element = elements.getJSONObject(i);
 			OSMObject osmObject = new OSMObject();
-			
+
 			osmObject.setType(element.optString("type"));
 			osmObject.setId(element.getLong("id"));
-			
+
 			osmObject.setVersion(element.getInt("version"));
 
 			osmObject.setUID(element.optLong("uid", 0));
 			osmObject.setUser(element.optString("user", null));
-			
+
 			osmObject.setTimestamp(element.optString("timestamp", null));
-			
-			osmObject.setTags(element.getJSONObject("tags").toMap());
-			
+
+			if (element.has("tags")) {
+				osmObject.setTags(element.getJSONObject("tags").toMap());
+			}
+
 			if ("node".equals(element.optString("type"))) {
 				osmObject.setLon(element.getDouble("lon"));
 				osmObject.setLat(element.getDouble("lat"));
 			}
-			
+
 			if ("way".equals(element.optString("type"))) {
-				System.out.println(element);
+				List<Long> nodes = element.getJSONArray("nodes").toList().stream().map(o -> ((Number) o).longValue())
+						.collect(Collectors.toList());
+				osmObject.setNodes(nodes);
 			}
-			
+
 			if ("relation".equals(element.optString("type"))) {
 				JSONArray membersArray = element.optJSONArray("members");
-				for(int m = 0; m < membersArray.length(); m++) {
+				for (int m = 0; m < membersArray.length(); m++) {
 					JSONObject member = membersArray.getJSONObject(m);
 					osmObject.addMember(member.getLong("ref"), member.getString("type"), member.optString("role"));
 				}
 			}
-			
+
 			data.add(osmObject);
 		}
-		
+
 		return data;
 	}
-	
+
 	private String getOverpassQ(Envelope env) {
-		String query = qTemplate.replace("{{bbox}}", env.getMinY() + "," + env.getMinX() + "," + env.getMaxY() + "," + env.getMaxX());
+		String query = qTemplate.replace("{{bbox}}",
+				env.getMinY() + "," + env.getMinX() + "," + env.getMaxY() + "," + env.getMaxX());
 		try {
 			return URLEncoder.encode(query, "UTF-8");
 		} catch (UnsupportedEncodingException e) {

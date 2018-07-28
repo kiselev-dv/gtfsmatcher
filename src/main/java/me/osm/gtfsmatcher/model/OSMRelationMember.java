@@ -2,9 +2,9 @@ package me.osm.gtfsmatcher.model;
 
 public class OSMRelationMember {
 
-	private long ref;
-	private String type;
-	private String role;
+	public final long ref;
+	public final String type;
+	public final String role;
 
 	public OSMRelationMember(long ref, String type, String role) {
 		this.ref = ref;

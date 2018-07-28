@@ -8,7 +8,7 @@
 	src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.2/angular.min.js"></script>
 
 <script src="gtfsmatcher.js"></script>
-<link rel="stylesheet" type="text/css" href="main.css" />
+<link rel="stylesheet" type="text/css" href="index.css" />
 <link rel="stylesheet"
 	href="https://unpkg.com/leaflet@1.3.1/dist/leaflet.css"
 	integrity="sha512-Rksm5RenBEKSKFjgI3a41vrjkw4EVPlJ3+OiI65vTjIdo9brlAacEuKOiQ5OFh7cOI1bkDwLqdLw3Zg0cRJAAQ=="
@@ -20,82 +20,155 @@
 </head>
 
 <body>
-	<div ng-controller="StopsController" class="row">
-		<div class="col compact">
-			<div ng-init="activeTab = 'stops'">
-				<span ng-click="activeTab = 'stops'" >Stops</span>
-				<span ng-click="activeTab = 'routes'">Routes</span>
-				<span ng-click="activeTab = 'changes'">Changes</span>
-				<div>Name pattern: <input style="width: 80%" ng-model="namePattern"></input></div>
+	<div ng-controller="StopsController" class="content">
+		<div class="side compact">
+			<!-- Side header-->
+			<div class="side-header tabs" ng-init="activeTab = 'stops'">
+				
+				<div class="details" ng-if="selectedStop">
+					<h3>Stop: {{selectedStop.code}} {{selectedStop.name}}</h3>
+					<div> Routes for this stop:
+						<a ng-repeat="route in getStopRoutes(selectedStop)" 
+							ng-click="showTrip(getTripForStop(selectedStop, route), route);"> {{route.name}} </a>
+					</div>
+					<div ng-if="selectedStop.matched">
+						<div>Matched object tags:</div>
+						<table>
+							<tr ng-repeat="(k,v) in selectedStop.matched.tags">
+								<td ng-bind="k"></td>
+								<td><input ng-model="v" ng-change="editTags(selectedStop, k, v);"></td>
+							</tr>
+						</table>
+						<button 
+							ng-hide="selectedStop.matched.tags.ref == selectedStop.code" 
+							ng-click="stopSetRef(selectedStop);" >Set ref</button>
+						<button 
+							ng-hide="selectedStop.matched.tags.name == selectedStop.name" 
+							ng-click="stopSetName(selectedStop);" >Set name</button>	
+					</div>
+					<div ng-hide="selectedStop.matched">
+						<div ng-if="selectedStop.candidates">Candidates</div>
+						<div ng-repeat="candidate in selectedStop.candidates">
+							<button ng-click="assignMatched(selectedStop, candidate);">assign</button>
+							<span ng-bind="candidate.tags.ref"></span>
+							<span ng-bind="candidate.tags.name"></span>
+						</div>
+					</div>
+					<button ng-click="resetMatch(selectedStop);">Reassign</button>
+					<button ng-click="createMatched(selectedStop);" ng-hide="selectedStop.matched">Add to OSM</button>
+					<button ng-click="moveMatched(selectedStop);" ng-if="selectedStop.matched" ng-disabled="reassignPositionMode">
+						{{reassignPositionMode ? 'Click on map in new position' : 'Move OSM object'}}
+					</button>
+				</div>
+
+				<div class="details" ng-if="selectedRoute" >
+					<h3>Route: {{selectedRoute.name}}</h3>
+					<div ng-repeat="trip in selectedRoute.trips" class="trip" >
+						<div ng-click="showTrip(trip, selectedRoute);" ng-class="{'matched': trip.exactMatch}">
+							Trip {{$index + 1}} 
+						</div>
+						<div ng-if="trip.matchedOSMTrip" ng-click="selectOSMOrphanedRoute(osmTrip);" ng-class="{'matched': trip.exactMatch}">
+							Matched OSM Trip: {{trip.matchedOSMTrip.tags.name}}
+						</div>
+						<div>
+							<button ng-click="showTripStopsComparison(trip, trip.matchedOSMTrip);">Compare stops</button>
+							<button ng-if="!trip.exactMatch && trip.matchedOSMTrip" ng-click="setTripStops(trip, trip.matchedOSMTrip);">Set stops</button>
+							<button ng-hide="trip.matchedOSMTrip" ng-click="modeAssignOSMTrip(trip);">Assign OSM Route</button>
+							<button ng-hide="selectedRoute.possibleOSMTrips" 
+								ng-click="createOSMRelation(selectedRoute, trip);">Create OSM Relation</button>
+						</div>
+						<a ng-repeat="stopid in trip.stops" 
+							ng-click="selectStopInRoute(stopid, selectedRoute);" 
+							ng-bind="stopid"
+							ng-class="{matched: isStopMatched(stopid)}"></a>
+					</div>
+					<h5>Matched OSM Trips</h5>
+					<div ng-repeat="osmTrip in selectedRoute.possibleOSMTrips" 
+						ng-click="selectOSMOrphanedRoute(osmTrip);">
+						{{osmTrip.tags.ref}} - {{osmTrip.tags.name}}
+						<button ng-if="tripAssignSubj" ng-click="assignThisTrip(osmTrip);">Assign me</button>
+					</div>
+				</div>
+
+				<div class="details" ng-if="selectedOSMRoute" >
+					<h3>Route: {{selectedOSMRoute.tags.ref || selectedOSMRoute.tags.name}}</h3>
+					<table>
+						<tr ng-repeat="(k,v) in selectedOSMRoute.tags">
+							<td ng-bind="k"></td>
+							<td><input ng-model="selectedOSMRoute.tags[k]" 
+								ng-change="updateOSMRoute(selectedOSMRoute);"></td>
+						</tr>
+					</table>
+				</div>
+
+				<div class="tab-selector">
+					<span ng-click="activeTab = 'settings'" ng-class="{'active': activeTab == 'settings'}">Settings</span>
+					<span ng-click="activeTab = 'stops'"    ng-class="{'active': activeTab == 'stops'}">Stops</span>
+					<span ng-click="activeTab = 'routes'"   ng-class="{'active': activeTab == 'routes'}">Routes</span>
+					<span ng-click="activeTab = 'changes'"  ng-class="{'active': activeTab == 'changes'}">Changes</span>
+				</div>
+
 			</div>
-			<div class="tab" ng-if="activeTab == 'stops'">
-				<div class="scroll-wrapper">
+			<!-- End of side header -->
+
+			<div class="side-content" ng-if="activeTab == 'settings'">
+				<div>
+					<h3>Stops name pattern:</h3>
+					<input ng-model="settings.namePattern"></input>
+				</div>
+			</div>
+
+			<div class="side-content" ng-if="activeTab == 'stops'">
+				<div class="side-content-scroll">
 					<div id="stop{{stop.id}}" ng-repeat="stop in stops" >
 						<div 
 							ng-bind="stop.name" 
 							ng-class="{matched: stop.matched && stop.code == stop.matched.tags.ref}"
 							ng-click="selectStop(stop);" ></div>
-						<div class="details" ng-if="selected == stop.id">
-							<div><a ng-repeat="route in getStopRoutes(stop)" ng-click="showTrip(getTripForStop(stop, route), route);"> {{route.name}} </a></div>
-							<div ng-if="stop.matched">
-								<div>Matched object tags:</div>
-								<table>
-									<tr ng-repeat="(k,v) in stop.matched.tags">
-										<td ng-bind="k"></td>
-										<td><input ng-model="v" ng-change="editTags(stop, k, v);"></td>
-									</tr>
-								</table>
-								<button 
-									ng-hide="stop.matched.tags.ref == stop.code" 
-									ng-click="stopSetRef(stop);" >Set ref</button>
-								<button 
-									ng-hide="stop.matched.tags.name == stop.name" 
-									ng-click="stopSetName(stop);" >Set name</button>	
-							</div>
-							<div ng-hide="stop.matched">
-								<div>Candidates</div>
-								<div ng-repeat="candidate in stop.candidates">
-									<button ng-click="assignMatched(stop, candidate);">assign</button>
-									<span ng-bind="candidate.tags.ref"></span>
-									<span ng-bind="candidate.tags.name"></span>
-								</div>
-							</div>
-							<button ng-click="resetMatch(stop);">Reassign</button>
-							<button ng-click="createMatched(stop);" ng-hide="stop.matched">Add to OSM</button>
-							<button ng-click="moveMatched(stop);" ng-if="stop.matched" ng-disabled="reassignPositionMode">
-								{{reassignPositionMode ? 'Click on map in new position' : 'Move OSM object'}}
-							</button>
-						</div>
 					</div>
 				</div>
 			</div>
-			<div class="tab" ng-if="activeTab == 'routes'">
-				<div class="scroll-wrapper">
+
+			<div class="side-content" ng-if="activeTab == 'routes'">
+				<div class="side-content-scroll">
+					<h3>Orphant OSM routes</h3>
+					<div ng-repeat="route in orphantOSMRoutes">
+						<div ng-bind="route.tags.ref || route.tags.name" ng-click="selectOSMOrphanedRoute(route);"></div>
+					</div>
+					<h3>GTFS Routes</h3>
 					<div ng-repeat="route in routes">
-						<div ng-bind="route.name" ng-click="open = !open"></div>
-						<div ng-repeat="trip in route.trips" ng-show="open" class="trip" >
-							<div ng-click="showTrip(trip, route);">Trip {{$index + 1}}</div>
-							<a ng-repeat="stopid in trip.stops" 
-								ng-click="selectStopInRoute(stopid, route);" 
-								ng-bind="stopid"
-								ng-class="{matched: isStopMatched(stopid)}"></a>
-						</div>
+						<div ng-bind="route.name" ng-click="selectRoute(route)"></div>
 					</div>
 				</div>
 			</div>
-			<div class="tab" ng-if="activeTab == 'changes'">
-				<div ng-repeat="obj in changes.create">
-					<div>Create {{obj.tags.ref}} {{obj.tags.name}}</div>
+
+			<div class="side-content" ng-if="activeTab == 'changes'">
+				<div class="side-content-scroll">
+					<div ng-repeat="obj in changes.create">
+						<div>Create {{obj.tags.ref}} {{obj.tags.name}}</div>
+					</div>
+					<div ng-repeat="obj in changes.update">
+						<div>Update {{obj.tags.ref}} {{obj.tags.name}}</div>
+					</div>
+					<button ng-click="getChangesetXML()">get xml</button>
+					<button ng-click="openJOSM()">Open in JOSM</button>
+					<div>{{changesetXML}}</div>
 				</div>
-				<div ng-repeat="obj in changes.update">
-					<div>Update {{obj.tags.ref}} {{obj.tags.name}}</div>
+			</div>
+
+		</div>
+		<div class="side compact" ng-if="tripComparison">
+			<div class="side-content-scroll" id="trip-stops-comparator">
+				<div ng-repeat="gtfsStop in tripComparison.gtfsTrip.stops">
+					<span ng-bind="gtfsStop"></span>
+					<span ng-repeat="osmStop in [getOSMStopInTrip(tripComparison.osmTrip, gtfsStop, $index)]" 
+						ng-style="{'background-color': osmStop.tags.ref == gtfsStop ? 'green' : ''}">
+						{{osmStop.tags.ref}} {{osmStop.tags.name}}
+					</span>
 				</div>
-				<button ng-click="getChangesetXML()">get xml</button>
-				<button ng-click="openJOSM()">Open in JOSM</button>
-				<div>{{changesetXML}}</div>
 			</div>
 		</div>
-		<div id="mapid" class="wide"></div>
+		<div id="mapid" class="map"></div>
 	</div>
 </body>
 </html>

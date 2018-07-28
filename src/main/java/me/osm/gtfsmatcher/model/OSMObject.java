@@ -25,6 +25,8 @@ public class OSMObject {
 
 	private String timestamp;
 
+	private List<Long> nodes;
+
 	public void setType(String type) {
 		this.type = type;
 	}
@@ -83,11 +85,19 @@ public class OSMObject {
 	}
 
 	public void addMember(long ref, String type, String role) {
-		if(members == null) {
-			members = new ArrayList<>();
+		if(this.members == null) {
+			this.members = new ArrayList<>();
 		}
 		
-		members.add(new OSMRelationMember(ref, type, role));
+		this.members.add(new OSMRelationMember(ref, type, role));
+	}
+
+	public List<OSMRelationMember> listMembers() {
+		return this.members;
+	}
+
+	public void setNodes(List<Long> nodes) {
+		this.nodes = nodes;
 	}
 	
 }

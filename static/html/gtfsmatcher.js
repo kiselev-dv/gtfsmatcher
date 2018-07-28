@@ -45,8 +45,13 @@ app.factory('Template', [function(){
 		var replacer = function(varName, regexpArgs, subj) {
 			var val = subj[varName];
 			if (regexpArgs) {
-				var m1 = /['\/"](.*)['\/"], ['\/"](.*)['\/"]/g.exec(regexpArgs);
-				return val.replace(RegExp(m1[1]), m1[2]);
+				// Replace $args inside re arguments
+				regexpArgs = regexpArgs.replace(/\$([\w]+)/g, function(match, vn) {
+					return subj[vn];
+				});
+
+				var args = /['\/"](.*)['\/"],[\s]*['\/"](.*)['\/"]/g.exec(regexpArgs);
+				return val.replace(RegExp(args[1]), args[2]);
 			}
 			
 			return val;
@@ -107,6 +112,27 @@ app.factory('Changeset', ['$http', '$sce', function($http, $sce) {
 			_update["node" + stop.matched.id] = stop.matched;
 		}
 	}
+
+	function updateOSM(osmObject) {
+		_update[osmObject.type + osmObject.id] = osmObject;
+	}
+	
+	function createOSM(osmObject) {
+		if (!osmObject.id) {
+			osmObject.id = -(countByType(osmObject.type, _create) + 1);
+		}
+		_create[osmObject.type + osmObject.id] = osmObject;
+	}
+	
+	function countByType(type, array) {
+		var counter = 0;
+		Object.keys(array).forEach(key => {
+			if(key.indexOf(type) === 0) {
+				counter ++;
+			}
+		});
+		return counter;
+	}
 	
 	function create(stop) {
 		var node = stop.matched;
@@ -159,7 +185,9 @@ app.factory('Changeset', ['$http', '$sce', function($http, $sce) {
 		create: create,
 		getChanges: getChanges,
 		getChangesetXML: getChangesetXML,
-		openInJOSM: openInJOSM
+		openInJOSM: openInJOSM,
+		updateOSM: updateOSM,
+		createOSM: createOSM
 	}
 	
 }]);
@@ -347,7 +375,7 @@ app.factory('MyMap', ['MatchTracker', function(tracker) {
 		_onCandidateClickCallback = callback;
 	}
 	
-	function showTrip(trip) {
+	function showTrip(trip, route) {
 		hideDetails();
 
 		var coords = [];
@@ -361,7 +389,14 @@ app.factory('MyMap', ['MatchTracker', function(tracker) {
 		});
 		
 		var polyline = L.polyline(coords);
-		var decor = L.polylineDecorator(polyline, {
+		var decor = addDecor(polyline);
+		
+		details.push(decor);
+		details.push(polyline.addTo(mymap));
+	}
+
+	function addDecor(polyline) {
+		return L.polylineDecorator(polyline, {
 		    patterns: [{
 	        	offset: '10%', 
 	        	repeat: 50, 
@@ -372,6 +407,22 @@ app.factory('MyMap', ['MatchTracker', function(tracker) {
 	        	})
 		    }]
 		}).addTo(mymap);
+	}
+
+	function showOSMRoute(route) {
+		hideDetails();
+
+		var coords = [];
+		route.stopNodes.forEach((n) => {
+			coords.push([n.lat, n.lon])
+		});
+
+		route.segments.forEach((s) => {
+			details.push(L.polyline(coords).addTo(mymap));
+		});
+
+		var polyline = L.polyline(coords);
+		var decor = addDecor(polyline);
 		
 		details.push(decor);
 		details.push(polyline.addTo(mymap));
@@ -386,7 +437,8 @@ app.factory('MyMap', ['MatchTracker', function(tracker) {
 		reassignPosition: reassignPosition,
 		fitBounds: fitBounds,
 		onCandidateClick: onCandidateClick,
-		showTrip: showTrip
+		showTrip: showTrip,
+		showOSMRoute: showOSMRoute
 	};
 	
 }]);
@@ -435,7 +487,7 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 		if (!$scope.reassignPositionMode) {
 			$scope.$apply(function() {
 				$anchorScroll('stop' + stop.id);
-				$scope.selected = stop.id;
+				$scope.selectedStop = stop;
 			});
 		}
 	}
@@ -445,10 +497,14 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 		
 		if (!$scope.reassignPositionMode) {
 			$scope.$apply(function() {
-				$scope.selected = null;
+				$scope.selectedStop = null;
 			});
 		}
 	}
+
+	$scope.settings = {
+		namePattern: '',
+	};
 	
 	stops.list().then(function(response) {
 		
@@ -466,11 +522,14 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 		$scope.stops = response.data;
 
 		routes.list().then(function(response) {
-			$scope.routes = response.data;
+			$scope.routes = response.data.routes;
+			$scope.orphantOSMRoutes = response.data.orphants;
+			$scope.osmRoutesData = response.data.data;
 		});
 	});
 	
 	$scope.selectStop = function(stop) {
+		$scope.selectedStop = stop;
 		// Exit $scope digest flow
 		setTimeout(function() {
 			mymap.showDetails(stop);
@@ -499,7 +558,7 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 	
 	$scope.stopSetName = function(stop) {
 		var name = stop.name;
-		if ($scope.namePattern) {
+		if ($scope.settings.namePattern) {
 			name = templateName(stop);
 		}
 		
@@ -527,11 +586,12 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 	
 	$scope.createMatched = function(stop) {
 		var name = stop.name;
-		if ($scope.namePattern) {
+		if ($scope.settings.namePattern) {
 			name = templateName(stop);
 		}
 		
 		var newNode = {
+			type: 'node',
 			lat: stop.lat,
 			lon: stop.lon,
 			tags: {
@@ -586,12 +646,13 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 			stops.push(data.getStop(sid));
 		});
 		mymap.showTrip(stops);
+		$scope.selectRoute(route);
 	};
 	
 	var nameTemplate = null;
 	function templateName (stop) {
 		if (!nameTemplate) {
-			nameTemplate = Template.parse($scope.namePattern);
+			nameTemplate = Template.parse($scope.settings.namePattern);
 		}
 		return nameTemplate.render(stop);
 	}
@@ -628,6 +689,128 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 	
 	$scope.isStopMatched = function(stopid) {
 		return !!data.getStop(stopid).matched;
+	};
+
+	$scope.selectRoute = function(route) {
+		$scope.selectedRoute = route;
+	};
+
+	$scope.selectOSMOrphanedRoute = function(route) {
+		$scope.selectedOSMRoute = route;
+
+		if ($scope.osmRoutesData) {
+			let stopNodes = [];
+			let segments = [];
+			$scope.selectedOSMRoute.members.forEach(m => {
+				if(m.type == 'node') {
+					stopNodes.push($scope.osmRoutesData.nodes[m.ref]);
+				}
+				if(m.type == 'way') {
+					let segmentNodes = [];
+					$scope.osmRoutesData.ways[m.ref].nodes.forEach(n => {
+						segmentNodes.push(n);
+					});
+					segments.push(segmentNodes);
+				}
+			});
+			
+			mymap.showOSMRoute({
+				stopNodes: stopNodes,
+				segments: segments
+			});
+		}
+
+	};
+
+	$scope.showTripStopsComparison = function(gtfsTrip, osmTrip) {
+		$scope.tripComparison = {
+			gtfsTrip: gtfsTrip,
+			osmTrip: osmTrip
+		};
+	};
+
+	$scope.getOSMStopInTrip = function(osmTrip, gtfsStop, stopIndex) {
+		let stopNodes = [];
+		osmTrip.members.forEach(m => {
+			if(m.type == 'node') {
+				let osmNode = $scope.osmRoutesData.nodes[m.ref];
+				if (osmNode.tags.highway == 'bus_stop'){
+					stopNodes.push(osmNode);
+				}
+			}
+		});
+
+		return stopNodes[stopIndex];
+	};
+
+	$scope.setTripStops = function(gtfsTrip, matchedOSMTrip) {
+		matchedOSMTrip.members = matchedOSMTrip.members.filter(m => {
+			if(m.type == 'node') {
+				let osmNode = $scope.osmRoutesData.nodes[m.ref];
+				if (osmNode.tags.highway == 'bus_stop'){
+					return false;
+				}
+			}
+			return true;
+		});
+
+		let segments = matchedOSMTrip.members;
+		matchedOSMTrip.members = [];
+		gtfsTrip.stops.forEach((s) => {
+			if(data.getStop(s).matched) {
+				matchedOSMTrip.members.push({
+					type: 'node',
+					ref: data.getStop(s).matched.id,
+					role: ''
+				});
+			}	
+		});
+		segments.forEach(s => {
+			matchedOSMTrip.members.push(s);
+		});
+
+		changeset.updateOSM(matchedOSMTrip);
+	};
+
+	$scope.modeAssignOSMTrip = function(trip) {
+		$scope.tripAssignSubj = trip;
+		
+	};
+	
+	$scope.assignThisTrip = function(osmTrip) {
+		$scope.tripAssignSubj.matchedOSMTrip = osmTrip; 
+		$scope.tripAssignSubj = null;
+	};
+	
+	$scope.createOSMRelation = function(route, trip) {
+		var osmRelation = {
+			type: 'relation',
+			tags: {
+				type: 'route',
+				'public_transport:version': '2',
+				route: 'bus',
+				ref: route.name,
+			},
+			members: []
+		};
+		trip.stops.forEach(s => {
+			let stop = data.getStop(s);
+			if (stop.matched) {
+				osmRelation.members.push({
+					ref: stop.matched.id,
+					type: 'node',
+					role: ''
+				});
+			}
+		});
+		changeset.createOSM(osmRelation);
+		
+		trip.matchedOSMTrip = osmRelation;
+		trip.exactMatch = true;
+	};
+
+	$scope.updateOSMRoute = function(osmroute) {
+		changeset.updateOSM(osmroute);
 	};
 	
 }]);

@@ -67,71 +67,94 @@ public class ChangesetAPI {
 
 	private String encodeChanges(JSONObject changes) throws ParserConfigurationException,
 			TransformerFactoryConfigurationError, TransformerConfigurationException, TransformerException {
-		DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
-		DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
-		
-		Document doc = docBuilder.newDocument();
-		Element osm = doc.createElement("osm");
-		doc.appendChild(osm);
-		
-		osm.setAttribute("version", "0.6");
-		osm.setAttribute("generator", "gtfs-conflate v0.0.1");
-		
-		setBBOX(changes, doc, osm);
-		
-		JSONArray create = changes.optJSONArray("create");
-		if(create != null) {
-			addNodes(doc, osm, create, false);
+		try {
+			DocumentBuilderFactory docFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilder docBuilder = docFactory.newDocumentBuilder();
+			
+			Document doc = docBuilder.newDocument();
+			Element osm = doc.createElement("osm");
+			doc.appendChild(osm);
+			
+			osm.setAttribute("version", "0.6");
+			osm.setAttribute("generator", "gtfs-conflate v0.0.1");
+			
+			setBBOX(changes, doc, osm);
+			
+			JSONArray create = changes.optJSONArray("create");
+			if(create != null) {
+				addNodes(doc, osm, create, false);
+			}
+			JSONArray update = changes.optJSONArray("update");
+			if(update != null) {
+				addNodes(doc, osm, update, true);
+			}
+			
+			DOMSource source = new DOMSource(doc);
+			StringWriter writer = new StringWriter();
+			StreamResult result = new StreamResult(writer);
+			TransformerFactory tf = TransformerFactory.newInstance();
+			Transformer transformer = tf.newTransformer();
+			transformer.transform(source, result);
+			
+			return writer.toString();
 		}
-		JSONArray update = changes.optJSONArray("update");
-		if(update != null) {
-			addNodes(doc, osm, update, true);
+		catch (Exception e) {
+			e.printStackTrace();
+			throw e;
 		}
-		
-		DOMSource source = new DOMSource(doc);
-		StringWriter writer = new StringWriter();
-		StreamResult result = new StreamResult(writer);
-		TransformerFactory tf = TransformerFactory.newInstance();
-		Transformer transformer = tf.newTransformer();
-		transformer.transform(source, result);
-		
-		return writer.toString();
 	}
 
 	private void addNodes(Document doc, Element osm, JSONArray create, boolean update) {
 		for(int i = 0; i < create.length(); i++) {
 			JSONObject obj = create.getJSONObject(i);
-			Element node = doc.createElement("node");
+			Element element = doc.createElement(obj.getString("type"));
 			
-			node.setAttribute("id", obj.get("id").toString());
-			node.setAttribute("lat", obj.get("lat").toString());
-			node.setAttribute("lon", obj.get("lon").toString());
-			node.setAttribute("visible", "true");
+			element.setAttribute("id", obj.get("id").toString());
+			element.setAttribute("visible", "true");
+
+			if("node".equals(obj.getString("type"))) {
+				element.setAttribute("lat", obj.get("lat").toString());
+				element.setAttribute("lon", obj.get("lon").toString());
+			}
 			
 			if(StringUtils.stripToNull(obj.optString("timestamp")) != null) {
-				node.setAttribute("timestamp", obj.optString("timestamp"));
+				element.setAttribute("timestamp", obj.optString("timestamp"));
 			}
 			
 			if(StringUtils.stripToNull(obj.optString("user")) != null) {
-				node.setAttribute("user", obj.optString("user"));
+				element.setAttribute("user", obj.optString("user"));
 			}
 			
 			if(StringUtils.stripToNull(obj.optString("version")) != null) {
-				node.setAttribute("version", obj.optString("version"));
+				element.setAttribute("version", obj.optString("version"));
+			}
+
+			if("relation".equals(obj.getString("type"))) {
+				JSONArray membersArr = obj.getJSONArray("members");
+				membersArr.forEach(m -> {
+					JSONObject member = (JSONObject)m;
+
+					Element memberXML = doc.createElement("member");
+					memberXML.setAttribute("type", member.getString("type"));
+					memberXML.setAttribute("ref", member.get("ref").toString());
+					memberXML.setAttribute("role", StringUtils.stripToEmpty(member.optString("role")));
+
+					element.appendChild(memberXML);
+				});
 			}
 			
-			osm.appendChild(node);
+			osm.appendChild(element);
 			
 			Map<String, Object> tags = obj.getJSONObject("tags").toMap();
 			tags.entrySet().forEach(kv -> {
 				Element tag = doc.createElement("tag");
 				tag.setAttribute("k", kv.getKey().toString());
 				tag.setAttribute("v", kv.getValue().toString());
-				node.appendChild(tag);
+				element.appendChild(tag);
 			});
 			
 			if (update) {
-				node.setAttribute("action", "modify");
+				element.setAttribute("action", "modify");
 			}
 		}
 	}

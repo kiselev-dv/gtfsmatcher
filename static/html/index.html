@@ -26,6 +26,7 @@
 			<div class="side-header tabs" ng-init="activeTab = 'stops'">
 				
 				<div class="details" ng-if="selectedStop">
+					<div class="close-button" ng-click="closeSelectedStop();">X</div>
 					<h3>Stop: {{selectedStop.code}} {{selectedStop.name}}</h3>
 					<div> Routes for this stop:
 						<a ng-repeat="route in getStopRoutes(selectedStop)" 
@@ -62,6 +63,7 @@
 				</div>
 
 				<div class="details" ng-if="selectedRoute" >
+					<div class="close-button" ng-click="closeSelectedRoute();">X</div>
 					<h3>Route: {{selectedRoute.name}}</h3>
 					<div ng-repeat="trip in selectedRoute.trips" class="trip" >
 						<div ng-click="showTrip(trip, selectedRoute);" ng-class="{'matched': trip.exactMatch}">
@@ -91,6 +93,7 @@
 				</div>
 
 				<div class="details" ng-if="selectedOSMRoute" >
+					<div class="close-button" ng-click="closeSelectedOSMRoute();">X</div>
 					<h3>Route: {{selectedOSMRoute.tags.ref || selectedOSMRoute.tags.name}}</h3>
 					<table>
 						<tr ng-repeat="(k,v) in selectedOSMRoute.tags">

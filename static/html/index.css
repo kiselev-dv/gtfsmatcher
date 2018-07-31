@@ -95,3 +95,9 @@ table {
 input {
 	width: 100%;
 }
+
+.close-button {
+	width: 10px;
+	height: 10px;
+	float: right;
+}

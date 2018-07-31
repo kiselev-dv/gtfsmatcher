@@ -812,6 +812,18 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 	$scope.updateOSMRoute = function(osmroute) {
 		changeset.updateOSM(osmroute);
 	};
+
+	$scope.closeSelectedStop = function() {
+		$scope.selectedStop = null;
+	};
+
+	$scope.closeSelectedRoute = function() {
+		$scope.selectedRoute = null;
+	};
+
+	$scope.closeSelectedOSMRoute = function() {
+		$scope.selectedOSMRoute = null;
+	};
 	
 }]);
 

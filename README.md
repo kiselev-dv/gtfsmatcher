@@ -6,11 +6,10 @@ From the root of the project:
 
 ```
 # Build
-mvn compile package
-mvn dependency:copy-dependencies
+mvn clean compile package
 
 # Then run
-java -cp target/gtfsmatcher-0.0.1-SNAPSHOT.jar:target/dependency/* me.osm.gtfsmatcher.GTFSMatcher
+java -jar target/gtfsmatcher.jar
 
 ```
 By default gtfs file should be `data/google_transit.zip` 

@@ -1,25 +1,26 @@
 package me.osm.gtfsmatcher.model;
 
+import java.util.HashSet;
+import java.util.Set;
+
 import org.apache.commons.lang3.StringUtils;
 
 public class GTFSTrip {
 
 	private String[] stops;
+	private Set<String> gtfsTripsIds = new HashSet<>();
 	
-	/*
-	 * The problem is there is no any natural code or id in both,
-	 * gtfs and osm for trip.
-	 * 
-	 * So this will always a better or worse guess
-	 * */
-	private OSMRelation route;
-
+	private String asString;
+	
 	private OSMObject matchedOSMTrip;
 
 	private boolean exactMatch;
+	private GTFSTrip containedBy;
 
-	public GTFSTrip(String[] stops) {
+	public GTFSTrip(String[] stops, String tripId) {
 		this.stops = stops;
+		this.gtfsTripsIds.add(tripId);
+		this.asString = StringUtils.join(stops, ';');
 	}
 	
 	@Override
@@ -29,12 +30,12 @@ public class GTFSTrip {
 	
 	@Override
 	public String toString() {
-		return StringUtils.join(stops, ';');
+		return this.asString;
 	}
 
 	@Override
 	public boolean equals(Object obj) {
-		return toString().equals(obj);
+		return toString().equals(obj.toString());
 	}
 
 	public String[] getStops() {
@@ -55,6 +56,18 @@ public class GTFSTrip {
 
 	public boolean isExactMatch() {
 		return exactMatch;
+	}
+
+	public void addId(String tripId) {
+		this.gtfsTripsIds.add(tripId);
+	}
+
+	public Set<String> getGtfsTripsIds() {
+		return gtfsTripsIds;
+	}
+
+	public void setContainedBy(GTFSTrip enclosing) {
+		this.containedBy = enclosing;
 	}
 
 }

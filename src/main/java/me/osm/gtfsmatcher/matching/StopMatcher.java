@@ -1,6 +1,6 @@
-package me.osm.gtfsmatcher;
+package me.osm.gtfsmatcher.matching;
 
-import java.io.FileNotFoundException;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -23,8 +23,6 @@ import org.apache.commons.csv.CSVRecord;
 import org.apache.commons.io.IOUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.restexpress.Request;
-import org.restexpress.Response;
 
 import com.vividsolutions.jts.geom.Coordinate;
 import com.vividsolutions.jts.geom.Envelope;
@@ -32,91 +30,81 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.index.strtree.STRtree;
 
-import me.osm.gtfsmatcher.matching.DefaultStopsMatcher;
-import me.osm.gtfsmatcher.matching.StopsMatcher;
-import me.osm.gtfsmatcher.model.MatchedStop;
+import me.osm.gtfsmatcher.model.GTFSStop;
 import me.osm.gtfsmatcher.model.OSMObject;
 import me.osm.gtfsmatcher.util.ByDistanceComparator;
 import me.osm.gtfsmatcher.util.SphericalMercator;
 
-public class StopAPI {
+public class StopMatcher {
+	
+	private volatile static Envelope envelope = null;
+	
 	private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
 	private static final String urlBase = "http://overpass-api.de/api/interpreter?data=";
 	private static final String qTemplate = "[out:json][timeout:25];(node[\"highway\"=\"bus_stop\"]({{bbox}}););out meta;>;out meta qt;";
 	
-	private static final String DATA_FOLDER = System.getProperty("data.dir", System.getProperty("user.dir") + "/data"); 
-
 	private static final StopsMatcher matcher = new DefaultStopsMatcher();
 	
-	private volatile static Envelope envelope = null;
-	
-	public List<MatchedStop> read(Request req, Response res) throws FileNotFoundException, IOException {
-		try {
+	public List<GTFSStop> matchStops(File gtfs) throws IOException, MalformedURLException {
+		List<GTFSStop> gtfsStops = readStopsFromGTFS(gtfs);
+		
+		Envelope env = getEnvelope(gtfsStops);
+		List<OSMObject> osmStops = getOSMStops(env);
+		
+		STRtree index = new STRtree();
+		osmStops.forEach(stop -> {
+			Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(
+					SphericalMercator.lon2x(stop.getLon()), 
+					SphericalMercator.lat2y(stop.getLat())));
+			index.insert(point.getEnvelopeInternal(), stop);
+		});
+		index.build();
+		
+		gtfsStops.forEach(stop -> {
+			double x = SphericalMercator.lon2x(stop.getLon());
+			double y = SphericalMercator.lat2y(stop.getLat());
 			
-			List<MatchedStop> gtfsStops = readStopsFromGTFS();
+			Envelope qEnv = new Envelope(new Coordinate(x, y));
+			qEnv.expandBy(500.0);
 			
-			Envelope env = getEnvelope(gtfsStops);
-			List<OSMObject> osmStops = getOSMStops(env);
+			@SuppressWarnings("unchecked")
+			List<OSMObject> neighbours = index.query(qEnv);
+			Collections.sort(neighbours, new ByDistanceComparator(x, y));
 			
-			STRtree index = new STRtree();
-			osmStops.forEach(stop -> {
-				Point point = GEOMETRY_FACTORY.createPoint(new Coordinate(
-						SphericalMercator.lon2x(stop.getLon()), 
-						SphericalMercator.lat2y(stop.getLat())));
-				index.insert(point.getEnvelopeInternal(), stop);
-			});
-			index.build();
+			stop.setCandidates(neighbours);
 			
-			gtfsStops.forEach(stop -> {
-				double x = SphericalMercator.lon2x(stop.getLon());
-				double y = SphericalMercator.lat2y(stop.getLat());
-				
-				Envelope qEnv = new Envelope(new Coordinate(x, y));
-				qEnv.expandBy(500.0);
-				
-				@SuppressWarnings("unchecked")
-				List<OSMObject> neighbours = index.query(qEnv);
-				Collections.sort(neighbours, new ByDistanceComparator(x, y));
-				
-				stop.setCandidates(neighbours);
-				
-				List<OSMObject> matches = neighbours.stream()
-						.filter(neighbour -> matcher.match(stop, neighbour))
-						.collect(Collectors.toList());
-				
-				for (OSMObject o : matches) {
-					if ( matcher.refMatch(stop, o)) {
-						stop.setMatched(o);
-					}
+			List<OSMObject> matches = neighbours.stream()
+					.filter(neighbour -> matcher.match(stop, neighbour))
+					.collect(Collectors.toList());
+			
+			for (OSMObject o : matches) {
+				if ( matcher.refMatch(stop, o)) {
+					stop.setMatched(o);
 				}
-				matches.remove(stop.getMatched());
-				stop.setMatches(matches);
-				
-			});
+			}
+			matches.remove(stop.getMatched());
+			stop.setMatches(matches);
 			
-			return gtfsStops; 
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-			throw e;
-		}
+		});
+		
+		return gtfsStops;
 	}
 	
-	public static Envelope getEnvelope() throws IOException {
+	public static Envelope getEnvelope(File file) throws IOException {
 		if (envelope != null) {
 			return envelope;
 		}
 		
-		return getEnvelope(readStopsFromGTFS());
+		return getEnvelope(readStopsFromGTFS(file));
 	}
 
-	private static Envelope getEnvelope(List<MatchedStop> stops) {
+	public static Envelope getEnvelope(List<GTFSStop> stops) {
 		if (envelope != null) {
 			return envelope;
 		}
 		
 		Envelope env = new Envelope();
-		for (MatchedStop stop : stops) {
+		for (GTFSStop stop : stops) {
 			env.expandToInclude(stop.getLon(), stop.getLat());
 		}
 		
@@ -168,8 +156,8 @@ public class StopAPI {
 		}
 	}
 
-	private static List<MatchedStop> readStopsFromGTFS() throws IOException {
-		try(ZipFile zipFile = new ZipFile(DATA_FOLDER + "/google_transit.zip")) {
+	private static List<GTFSStop> readStopsFromGTFS(File file) throws IOException {
+		try(ZipFile zipFile = new ZipFile(file)) {
 			
 			Enumeration<? extends ZipEntry> entries = zipFile.entries();
 			
@@ -190,13 +178,13 @@ public class StopAPI {
 		return new ArrayList<>();
 	}
 
-	private static List<MatchedStop> readGTFSStops(CSVParser csvParser) throws IOException {
-		List<MatchedStop> stops = new ArrayList<MatchedStop>();
+	public static List<GTFSStop> readGTFSStops(CSVParser csvParser) throws IOException {
+		List<GTFSStop> stops = new ArrayList<GTFSStop>();
 		
 		for(CSVRecord rec : csvParser.getRecords()) {
 			Map<String, String> recordAsMap = rec.toMap();
 			
-			MatchedStop stop = new MatchedStop();
+			GTFSStop stop = new GTFSStop();
 			
 			stop.setId(recordAsMap.get("stop_id"));
 			stop.setCode(recordAsMap.get("stop_code"));
@@ -211,4 +199,5 @@ public class StopAPI {
 		
 		return stops;
 	}
+
 }

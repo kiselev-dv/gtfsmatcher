@@ -1,10 +1,8 @@
-package me.osm.gtfsmatcher;
+package me.osm.gtfsmatcher.model;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
-
-import me.osm.gtfsmatcher.model.OSMObject;
 
 public class OSMData {
 

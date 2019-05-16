@@ -1,13 +1,15 @@
-package me.osm.gtfsmatcher;
+package me.osm.gtfsmatcher.model;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import org.apache.commons.csv.CSVParser;
@@ -43,7 +45,9 @@ public class RoutesBuilder {
 		csvParser.forEach(csv -> {
 			String trip = csv.get("trip_id");
 			String stop = csv.get("stop_id");
-			int seq = Integer.parseInt(csv.get("stop_sequence"));
+			
+			// For the cases when stop sequence starts from 0
+			int seq = Integer.parseInt(csv.get("stop_sequence")) + 1;
 			
 			if(trip2Stops.get(trip) == null) {
 				trip2Stops.put(trip, new String[seq]);
@@ -59,15 +63,23 @@ public class RoutesBuilder {
 
 	public Collection<GTFSRoute> buildRoutes() {
 		
-		trip2Stops.entrySet().forEach(t2s -> {
+		for(Entry<String, String[]> t2s: trip2Stops.entrySet()) {
 			String trip = t2s.getKey();
 			String[] stops = t2s.getValue();
 			
 			GTFSRoute gtfsRoute = routeById.get(trip2Route.get(trip));
-			gtfsRoute.addTrip(stops);
-		});
+			gtfsRoute.addTrip(trimArray(stops), trip);
+		}
 		
-		routeById.values().forEach(r -> r.sortAndMergeTrips());
+		// Free some memory
+		trip2Stops.clear();
+		trip2Route.clear();
+		
+		System.out.println("Found " + routeById.values().size() + " routes");
+		
+		for(GTFSRoute r : routeById.values()) {
+			r.sortAndMergeTrips();
+		}
 		
 		List<GTFSRoute> routes = new ArrayList<>(routeById.values());
 		
@@ -83,6 +95,30 @@ public class RoutesBuilder {
 		
 		routes.sort(comparator);
 		return routes;
+	}
+
+	private String[] trimArray(String[] stops) {
+		List<String> list = Arrays.asList(stops);
+		
+		list = trimHead(list);
+		Collections.reverse(list);
+		list = trimHead(list);
+		Collections.reverse(list);
+		
+		return list.toArray(new String[list.size()]);
+	}
+
+	private List<String> trimHead(List<String> list) {
+		List<String> result = new ArrayList<>();
+		for(String s : list) {
+			if(s != null) {
+				result.add(s);
+			}
+			else if(!result.isEmpty()) {
+				result.add(s);
+			}
+		}
+		return result;
 	}
 
 }

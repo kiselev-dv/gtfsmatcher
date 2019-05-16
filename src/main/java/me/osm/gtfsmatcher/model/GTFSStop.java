@@ -2,7 +2,7 @@ package me.osm.gtfsmatcher.model;
 
 import java.util.List;
 
-public class MatchedStop {
+public class GTFSStop {
 
 	private String id;
 	private String code;

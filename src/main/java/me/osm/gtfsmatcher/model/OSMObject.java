@@ -99,5 +99,8 @@ public class OSMObject {
 	public void setNodes(List<Long> nodes) {
 		this.nodes = nodes;
 	}
-	
+
+	public List<Long> getNodes() {
+		return nodes;
+	}
 }

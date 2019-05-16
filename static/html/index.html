@@ -117,6 +117,21 @@
 			<div class="side-content" ng-if="activeTab == 'settings'">
 				<div>
 					<h3>Stops name pattern:</h3>
+					<div>
+						<div>Use $key or $key.re('search pattern', 'replace pattern').</div>
+						<div>Some keys:</div>
+						<ul>
+							<li>$name</li>
+							<li>$code</li>
+							<li>$id</li>
+						</ul>
+						<div>
+							Example: remove ref from the end of title, 
+							and add it to the begining:
+							
+							$code - $name.re('\(.*\)', '')
+						</div>
+					</div>
 					<input ng-model="settings.namePattern"></input>
 				</div>
 			</div>

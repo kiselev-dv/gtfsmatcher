@@ -1,4 +1,4 @@
-package me.osm.gtfsmatcher;
+package me.osm.gtfsmatcher.rest;
 
 import java.io.File;
 import java.io.FileInputStream;

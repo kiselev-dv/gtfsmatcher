@@ -199,11 +199,12 @@ app.factory('MyMap', ['MatchTracker', function(tracker) {
 	
 	var osmUrl='https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
 	var osmAttrib='Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors';
-	var mapnik = new L.TileLayer(osmUrl, {maxZoom: 18, attribution: osmAttrib});
+	var mapnik = new L.TileLayer(osmUrl, {maxZoom: 20, maxNativeZoom:18, attribution: osmAttrib});
 
 	var sat = new L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token={accessToken}', {
 	    attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, <a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
-	    maxZoom: 18,
+	    maxZoom: 20,
+	    maxNativeZoom: 18,
 	    id: 'mapbox.streets-satellite',
 	    accessToken: 'pk.eyJ1IjoiZW5kcG9pbnRjb3JwIiwiYSI6ImNqamFndTdiZjA1dmkzcG80bzU5bWh3N3AifQ.W7E1_Wt04nRuZIhoiR_P3g'
 	});
@@ -657,7 +658,7 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 		return nameTemplate.render(stop);
 	}
 	
-	$scope.$watch('namePattern', function() {
+	$scope.$watch('settings.namePattern', function() {
 		nameTemplate = null;
 	});
 	

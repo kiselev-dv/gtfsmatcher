@@ -1,9 +1,7 @@
-package me.osm.gtfsmatcher;
+package me.osm.gtfsmatcher.model;
 
 import java.util.Collection;
 import java.util.List;
-
-import me.osm.gtfsmatcher.model.OSMObject;
 
 public class RoutesData {
 
@@ -15,6 +13,18 @@ public class RoutesData {
 		this.routes = routes;
 		this.orphants = orphants;
 		this.data = data;
+	}
+
+	public Collection<GTFSRoute> getRoutes() {
+		return routes;
+	}
+
+	public List<OSMObject> getOrphants() {
+		return orphants;
+	}
+
+	public OSMData getData() {
+		return data;
 	}
 
 }

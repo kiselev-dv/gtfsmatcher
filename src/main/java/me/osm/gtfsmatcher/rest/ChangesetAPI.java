@@ -1,4 +1,4 @@
-package me.osm.gtfsmatcher;
+package me.osm.gtfsmatcher.rest;
 
 import java.io.IOException;
 import java.io.StringWriter;

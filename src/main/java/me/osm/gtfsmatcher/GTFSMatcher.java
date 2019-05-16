@@ -1,48 +1,51 @@
 package me.osm.gtfsmatcher;
 
-import org.restexpress.Flags;
-import org.restexpress.RestExpress;
+import java.util.Arrays;
 
-import io.netty.handler.codec.http.HttpMethod;
+import com.beust.jcommander.JCommander;
+
+import me.osm.gtfsmatcher.augmentation.AugmentBatch;
+import me.osm.gtfsmatcher.augmentation.GTFSAugment;
 
 public class GTFSMatcher {
-	
-	private RestExpress server;
 
-	public GTFSMatcher() {
-		createServer();
-	}
-
-	private void createServer() {
-		server = new RestExpress();
-		
-		server.setPort(9080);
-		
-		server.uri("/stops/{region}/list.{format}", new StopAPI())
-			.method(HttpMethod.GET)
-			.name("feature")
-			.flag(Flags.Auth.PUBLIC_ROUTE);
-		
-		server.uri("/routes/{region}/list.{format}", new RoutesAPI())
-			.method(HttpMethod.GET)
-			.name("feature")
-			.flag(Flags.Auth.PUBLIC_ROUTE);
-		
-		server.uri("/format-changeset.xml", new ChangesetAPI())
-			.flag(Flags.Auth.PUBLIC_ROUTE)
-			.method(HttpMethod.POST).method(HttpMethod.GET).noSerialization();
-		
-		server.uri("/{filename}", new StaticAPI())
-			.alias("/")
-			.flag(Flags.Auth.PUBLIC_ROUTE)
-			.method(HttpMethod.GET).noSerialization();
-		
-		server.bind(9080);
-		server.awaitShutdown();
-	}
-	
 	public static void main(String[] args) {
-		new GTFSMatcher();
+		AugmentOptions aug = new AugmentOptions();
+		ServerOptions serve = new ServerOptions();
+		BatchOptions batch = new BatchOptions();
+		
+		JCommander jc = JCommander.newBuilder()
+				.programName("gtfsmatcher")
+				.addCommand("augment", aug)
+				.addCommand("serve", serve)
+				.addCommand("batch", batch)
+				.build();
+		
+		if(Arrays.stream(args).anyMatch(a -> "--help".equals(a) || "-h".equals(a))) {
+			jc.usage();
+			System.exit(0);
+		}
+		
+		try {
+			jc.parse(args);
+		}
+		catch (Exception e) {
+			System.out.println(e.getMessage());
+			jc.usage();
+			
+			System.exit(1);
+		}
+		
+		String parsedCommand = jc.getParsedCommand();
+		if (parsedCommand.equals("augment")) {
+			new GTFSAugment(aug);
+		}
+		else if (parsedCommand.equals("batch")) {
+			new AugmentBatch(batch);
+		}
+		else if (parsedCommand.equals("serve")) {
+			new GTFSMatcherServer(serve);
+		}
 	}
-
+	
 }

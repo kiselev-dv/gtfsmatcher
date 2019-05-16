@@ -133,6 +133,9 @@
 						</div>
 					</div>
 					<input ng-model="settings.namePattern"></input>
+					
+					<h3>OSM tag for stop code:</h3>
+					<input ng-model="settings.codeTag"></input>
 				</div>
 			</div>
 
@@ -141,7 +144,7 @@
 					<div id="stop{{stop.id}}" ng-repeat="stop in stops" >
 						<div 
 							ng-bind="stop.name" 
-							ng-class="{matched: stop.matched && stop.code == stop.matched.tags.ref}"
+							ng-class="{matched: isStopCodeMatch(stop)}"
 							ng-click="selectStop(stop);" ></div>
 					</div>
 				</div>

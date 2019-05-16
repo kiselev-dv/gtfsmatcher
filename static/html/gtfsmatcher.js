@@ -331,8 +331,8 @@ app.factory('MyMap', ['MatchTracker', function(tracker) {
 		return bbox;
 	}
 	
-	function redrawStop(stop) {
-		if (stop.matched && stop.code == stop.matched.tags.ref) {
+	function redrawStop(stop, codeTag) {
+		if (stop.matched && stop.code == stop.matched.tags[codeTag]) {
 			stop.circle.setStyle(CIRCLE_GREEN);
 		}
 		else {
@@ -505,6 +505,7 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 
 	$scope.settings = {
 		namePattern: '',
+		codeTag: 'ref'
 	};
 	
 	stops.list().then(function(response) {
@@ -546,7 +547,7 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 		}
 		stop.matched = candidate;
 		tracker.setMatched(stop, stop.matched);
-		mymap.redrawStop(stop);
+		mymap.redrawStop(stop, $scope.settings.codeTag);
 		
 		changeset.track(stop);
 	};
@@ -570,19 +571,23 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 	};
 	
 	$scope.stopSetRef = function(stop) {
-		stop.matched.tags.ref = stop.code;
+		stop.matched.tags[$scope.settings.codeTag] = stop.code;
 		stop.tagsChanged = true;
 		
 		changeset.update(stop);
 		
-		mymap.redrawStop(stop);
+		mymap.redrawStop(stop, $scope.settings.codeTag);
 	};
 	
 	$scope.resetMatch = function(stop) {
 		changeset.untrack(stop);
 		tracker.resetMatched(stop, stop.matched);
 		stop.matched = null;
-		mymap.redrawStop(stop);
+		mymap.redrawStop(stop, $scope.settings.codeTag);
+	};
+	
+	$scope.isStopCodeMatch = function(stop) {
+		return stop.matched && stop.code == stop.matched.tags[$scope.settings.codeTag];
 	};
 	
 	$scope.createMatched = function(stop) {
@@ -611,7 +616,7 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 		changeset.create(stop);
 		tracker.setMatched(stop, stop.matched);
 		
-		mymap.redrawStop(stop);
+		mymap.redrawStop(stop, $scope.settings.codeTag);
 	};
 	
 	$scope.moveMatched = function(stop) {
@@ -735,7 +740,7 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 		osmTrip.members.forEach(m => {
 			if(m.type == 'node') {
 				let osmNode = $scope.osmRoutesData.nodes[m.ref];
-				if (osmNode.tags.highway == 'bus_stop'){
+				if (osmNode.tags.highway == 'bus_stop') {
 					stopNodes.push(osmNode);
 				}
 			}

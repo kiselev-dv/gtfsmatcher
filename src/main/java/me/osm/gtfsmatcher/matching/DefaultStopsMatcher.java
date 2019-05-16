@@ -29,8 +29,17 @@ public class DefaultStopsMatcher implements StopsMatcher {
 	}
 
 	public boolean refMatch(GTFSStop stop, OSMObject neighbour) {
-		String osmRef = neighbour.getTags().get("ref");
-		return stop.getCode().equals(osmRef) || stop.getId().equals(osmRef);
+		System.out.println(stop.getName());
+		
+		Set<String> osmRefVariants = new HashSet();
+		
+		osmRefVariants.add(neighbour.getTags().get("ref"));
+		osmRefVariants.add(neighbour.getTags().get("gtfs:ref"));
+		osmRefVariants.add(neighbour.getTags().get("ref:gtfs"));
+		osmRefVariants.add(neighbour.getTags().get("gtfs_code"));
+		osmRefVariants.add(neighbour.getTags().get("gtfs_stop_code"));
+		
+		return osmRefVariants.contains(stop.getCode()) || osmRefVariants.contains(stop.getId());
 	}
 
 	@Override

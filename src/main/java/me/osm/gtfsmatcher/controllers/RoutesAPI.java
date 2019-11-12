@@ -1,4 +1,4 @@
-package me.osm.gtfsmatcher.rest;
+package me.osm.gtfsmatcher.controllers;
 
 import java.io.File;
 

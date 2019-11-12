@@ -37,15 +37,16 @@ public class GTFSMatcher {
 		}
 		
 		String parsedCommand = jc.getParsedCommand();
-		if (parsedCommand.equals("augment")) {
+		if (parsedCommand == null || parsedCommand.equals("serve")) {
+			new GTFSMatcherServer(serve);
+		}
+		else if (parsedCommand.equals("augment")) {
 			new GTFSAugment(aug);
 		}
 		else if (parsedCommand.equals("batch")) {
 			new AugmentBatch(batch);
 		}
-		else if (parsedCommand.equals("serve")) {
-			new GTFSMatcherServer(serve);
-		}
+		
 	}
 	
 }

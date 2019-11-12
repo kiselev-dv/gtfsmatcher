@@ -13,8 +13,7 @@ buildNumber.properties
 
 # eclipse project file
 .settings/
-.classpath
-.project
+.metadata/
 
 hs_err_pid*
 *.jar
@@ -26,3 +25,5 @@ hs_err_pid*
 *.log
 
 .vscode/
+
+google_transit.zip

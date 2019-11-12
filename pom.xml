@@ -12,14 +12,20 @@
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
 		<restexpress.version>0.11.3</restexpress.version>
+		<netty.version>4.1.42.Final</netty.version>
 	</properties>
 
 	<dependencies>
+		<dependency>
+			<groupId>com.strategicgains</groupId>
+			<artifactId>RestExpress</artifactId>
+			<version>${restexpress.version}</version>
+		</dependency>
 		<!-- https://mvnrepository.com/artifact/io.netty/netty-all -->
 		<dependency>
 			<groupId>io.netty</groupId>
 			<artifactId>netty-all</artifactId>
-			<version>4.1.25.Final</version>
+			<version>${netty.version}</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.apache.commons/commons-csv -->
 		<dependency>
@@ -32,11 +38,6 @@
 			<groupId>com.beust</groupId>
 			<artifactId>jcommander</artifactId>
 			<version>1.72</version>
-		</dependency>
-		<dependency>
-			<groupId>com.strategicgains</groupId>
-			<artifactId>RestExpress</artifactId>
-			<version>${restexpress.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>commons-io</groupId>
@@ -61,9 +62,9 @@
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/net.jodah/expiringmap -->
 		<dependency>
-		    <groupId>net.jodah</groupId>
-		    <artifactId>expiringmap</artifactId>
-		    <version>0.5.8</version>
+			<groupId>net.jodah</groupId>
+			<artifactId>expiringmap</artifactId>
+			<version>0.5.8</version>
 		</dependency>
 		<!-- https://mvnrepository.com/artifact/org.xerial/sqlite-jdbc -->
 		<dependency>

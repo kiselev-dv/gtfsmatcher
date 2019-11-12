@@ -1,11 +1,13 @@
 
-var app = angular.module('gtfsmatch', []);
+const searchParams = new URLSearchParams(window.location.search);
+const region = searchParams.get('region');
+const app = angular.module('gtfsmatch', []);
 
 app.factory('StopsService', ['$http', function($http) {
 	return {
 		list: function() {
 			return $http({
-			    url: '/stops/dbg/list.json', 
+			    url: '/stops/' + region + '/list.json', 
 			    method: "GET"
 			});
 		}
@@ -16,7 +18,7 @@ app.factory('RoutesService', ['$http', function($http) {
 	return {
 		list: function() {
 			return $http({
-			    url: '/routes/dbg/list.json', 
+			    url: '/routes/' + region + '/list.json', 
 			    method: "GET"
 			});
 		}

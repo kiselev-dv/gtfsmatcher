@@ -4,10 +4,11 @@ import org.restexpress.Flags;
 import org.restexpress.RestExpress;
 
 import io.netty.handler.codec.http.HttpMethod;
-import me.osm.gtfsmatcher.rest.ChangesetAPI;
-import me.osm.gtfsmatcher.rest.RoutesAPI;
-import me.osm.gtfsmatcher.rest.StaticAPI;
-import me.osm.gtfsmatcher.rest.StopAPI;
+import me.osm.gtfsmatcher.controllers.ChangesetAPI;
+import me.osm.gtfsmatcher.controllers.RegionsAPI;
+import me.osm.gtfsmatcher.controllers.RoutesAPI;
+import me.osm.gtfsmatcher.controllers.StaticAPI;
+import me.osm.gtfsmatcher.controllers.StopAPI;
 
 public class GTFSMatcherServer {
 	
@@ -32,6 +33,30 @@ public class GTFSMatcherServer {
 			.method(HttpMethod.GET)
 			.name("feature")
 			.flag(Flags.Auth.PUBLIC_ROUTE);
+		
+		RegionsAPI regionAPI = new RegionsAPI();
+		server.uri("/regions.{format}", regionAPI)
+			.action("list", HttpMethod.GET)
+			.method(HttpMethod.POST)
+			.name("feature")
+			.flag(Flags.Auth.PUBLIC_ROUTE);
+		
+		server.uri("/regions/{region}.{format}", regionAPI)
+			.method(HttpMethod.DELETE, HttpMethod.PUT)
+			.name("feature")
+			.flag(Flags.Auth.PUBLIC_ROUTE);
+		
+		server.uri("/regions/template.{format}", regionAPI)
+			.action("template", HttpMethod.GET)
+			.name("feature")
+			.flag(Flags.Auth.PUBLIC_ROUTE);
+		
+		server.uri("/regions/{region}/download.{format}", regionAPI)
+			.action("download", HttpMethod.POST)
+			.action("fileInfo", HttpMethod.GET)
+			.name("feature")
+			.flag(Flags.Auth.PUBLIC_ROUTE);
+		
 		
 		server.uri("/format-changeset.xml", new ChangesetAPI())
 			.flag(Flags.Auth.PUBLIC_ROUTE)

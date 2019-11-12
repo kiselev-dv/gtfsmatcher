@@ -25,6 +25,17 @@ app.factory('RoutesService', ['$http', function($http) {
 	};
 }]);
 
+app.factory('OptionsService', ['$http', function($http) {
+	return {
+		get: function() {
+			return $http({
+			    url: '/regions/' + region + '.json', 
+			    method: "GET"
+			});
+		}
+	};
+}]);
+
 app.factory('DataHolder', [function() {
 	var stopById = {};
 	return {
@@ -474,9 +485,9 @@ app.factory('MatchTracker', [function() {
 	
 }]);
 
-app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'RoutesService', 
+app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'RoutesService', 'OptionsService',
 	'Changeset', 'MyMap', 'MatchTracker', 'DataHolder', 'Template', '$timeout',
-	function($scope, $anchorScroll, stops, routes, changeset, mymap, tracker, data, Template, $timeout) {
+	function($scope, $anchorScroll, stops, routes, options, changeset, mymap, tracker, data, Template, $timeout) {
 	
 	mymap.onCandidateClick(function(stop, candidate) {
 		$scope.$apply(function() {
@@ -504,11 +515,13 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 			});
 		}
 	}
-
-	$scope.settings = {
-		namePattern: '',
-		codeTag: 'ref'
-	};
+	
+	options.get().then(resp => {
+		$scope.settings = {
+			namePattern: resp.data.nameTemplate || '',
+			codeTag: resp.data.gtfsRefTag || 'ref'
+		};
+	});
 	
 	stops.list().then(function(response) {
 		

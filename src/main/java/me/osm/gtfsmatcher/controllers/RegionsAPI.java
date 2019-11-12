@@ -46,6 +46,11 @@ public class RegionsAPI {
 		return create(req, res);
 	}
 	
+	public Region read(Request req, Response res) throws Exception {
+		String region = req.getHeader("region");
+		return RegionsDAO.getInstance().getRegion(region);
+	}
+	
 	public String download(Request req, Response res ) throws Exception {
 		String region = req.getHeader("region");
 		Region r = RegionsDAO.getInstance().getRegion(region);

@@ -42,7 +42,7 @@ public class GTFSMatcherServer {
 			.flag(Flags.Auth.PUBLIC_ROUTE);
 		
 		server.uri("/regions/{region}.{format}", regionAPI)
-			.method(HttpMethod.DELETE, HttpMethod.PUT)
+			.method(HttpMethod.DELETE, HttpMethod.PUT,  HttpMethod.GET)
 			.name("feature")
 			.flag(Flags.Auth.PUBLIC_ROUTE);
 		

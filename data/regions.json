@@ -1,1 +1,1 @@
-{"regions":[{"name":"halifax","title":"Halifax","gtfsSource":"http://gtfs.halifax.ca/static/google_transit.zip","gtfsRTSource":null,"gtfsRefTag":"ref","nameTemplate":null}]}
+{"regions":[{"name":"halifax","title":"Halifax","gtfsSource":"http://gtfs.halifax.ca/static/google_transit.zip","gtfsRTSource":null,"gtfsRefTag":"ref","nameTemplate":"$code - $name.re(' \\(.*\\)', '')"}]}

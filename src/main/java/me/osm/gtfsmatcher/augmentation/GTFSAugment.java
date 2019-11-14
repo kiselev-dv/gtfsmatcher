@@ -37,7 +37,7 @@ public class GTFSAugment {
 		
 		try {
 			StopMatcher matcher = new StopMatcher();
-			List<GTFSStop> matches = matcher.matchStops(gtfs);
+			List<GTFSStop> matches = matcher.matchStops(gtfs).getGtfs();
 			
 			RoutesMatcher routesMatcher = new RoutesMatcher();
 			

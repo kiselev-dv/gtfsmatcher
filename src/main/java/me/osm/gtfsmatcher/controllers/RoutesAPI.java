@@ -1,6 +1,7 @@
 package me.osm.gtfsmatcher.controllers;
 
 import java.io.File;
+import java.nio.file.Paths;
 
 import org.restexpress.Request;
 import org.restexpress.Response;
@@ -16,7 +17,7 @@ public class RoutesAPI {
 
 	public RoutesData read(Request req, Response res ) throws Exception {
 		
-		File file = new File(DATA_FOLDER + "/google_transit.zip");
+		File file = Paths.get(DATA_FOLDER, req.getHeader("region"), "google_transit.zip").toFile();
 		
 		return matcher.matchRoutes(file, false, null);
 	}

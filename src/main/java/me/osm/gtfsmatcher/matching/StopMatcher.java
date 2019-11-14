@@ -11,6 +11,7 @@ import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -31,6 +32,7 @@ import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.index.strtree.STRtree;
 
 import me.osm.gtfsmatcher.model.GTFSStop;
+import me.osm.gtfsmatcher.model.GTFSStopsMatch;
 import me.osm.gtfsmatcher.model.OSMObject;
 import me.osm.gtfsmatcher.util.ByDistanceComparator;
 import me.osm.gtfsmatcher.util.SphericalMercator;
@@ -45,11 +47,11 @@ public class StopMatcher {
 	
 	private static final StopsMatcher matcher = new DefaultStopsMatcher();
 	
-	public List<GTFSStop> matchStops(File gtfs) throws IOException, MalformedURLException {
+	public GTFSStopsMatch matchStops(File gtfs) throws IOException, MalformedURLException {
 		List<GTFSStop> gtfsStops = readStopsFromGTFS(gtfs);
 		
 		Envelope env = getEnvelope(gtfsStops);
-		List<OSMObject> osmStops = getOSMStops(env);
+		LinkedHashSet<OSMObject> osmStops = new LinkedHashSet<OSMObject>(getOSMStops(env));
 		
 		STRtree index = new STRtree();
 		osmStops.forEach(stop -> {
@@ -87,7 +89,15 @@ public class StopMatcher {
 			
 		});
 		
-		return gtfsStops;
+		gtfsStops.forEach(gtfsStop -> {
+			osmStops.remove(gtfsStop.getMatched());
+		});
+		
+		GTFSStopsMatch match = new GTFSStopsMatch();
+		match.setGtfs(gtfsStops);
+		match.setOrphants(new ArrayList<OSMObject>(osmStops));
+		
+		return match;
 	}
 	
 	public static Envelope getEnvelope(File file) throws IOException {

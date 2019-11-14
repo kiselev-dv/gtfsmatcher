@@ -4,13 +4,12 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.List;
 
 import org.restexpress.Request;
 import org.restexpress.Response;
 
 import me.osm.gtfsmatcher.matching.StopMatcher;
-import me.osm.gtfsmatcher.model.GTFSStop;
+import me.osm.gtfsmatcher.model.GTFSStopsMatch;
 
 public class StopAPI {
 	
@@ -18,7 +17,7 @@ public class StopAPI {
 
 	private StopMatcher matcher = new StopMatcher(); 
 	
-	public List<GTFSStop> read(Request req, Response res) throws FileNotFoundException, IOException {
+	public GTFSStopsMatch read(Request req, Response res) throws FileNotFoundException, IOException {
 		try {
 			String region = req.getHeader("region");
 			

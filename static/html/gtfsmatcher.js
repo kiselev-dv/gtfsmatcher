@@ -525,18 +525,19 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 	
 	stops.list().then(function(response) {
 		
-		response.data.forEach(function(stop) {
+		response.data.gtfs.forEach(function(stop) {
 			if (stop.matched) {
 				tracker.setMatched(stop, stop.matched);
 			}
 			mymap.displayStop(stop, showDetails.bind(this, stop), hideDetails.bind(this, stop));
 		});
 		
-		data.trackStops(response.data);
+		data.trackStops(response.data.gtfs);
 		
 		changeset.addBBOX(mymap.getBBOX());
 		mymap.fitBounds();
-		$scope.stops = response.data;
+		$scope.stops = response.data.gtfs;
+		$scope.orphantStops = response.data.orphants;
 
 		routes.list().then(function(response) {
 			$scope.routes = response.data.routes;

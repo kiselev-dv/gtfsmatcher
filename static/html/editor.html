@@ -7,7 +7,13 @@
 <script
 	src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.2/angular.min.js"></script>
 
-<script src="gtfsmatcher.js"></script>
+<script src="js/editorapp.js"></script>
+<script src="js/template.js"></script>
+<script src="js/changeset.js"></script>
+<script src="js/matchtracker.js"></script>
+<script src="js/map.js"></script>
+<script src="js/stopscontroller.js"></script>
+
 <link rel="stylesheet" type="text/css" href="editor.css" />
 
 <link rel="stylesheet"
@@ -108,6 +114,7 @@
 				<div class="tab-selector">
 					<span ng-click="activeTab = 'settings'" ng-class="{'active': activeTab == 'settings'}">Settings</span>
 					<span ng-click="activeTab = 'stops'"    ng-class="{'active': activeTab == 'stops'}">Stops</span>
+					<span ng-click="activeTab = 'orphants'" ng-class="{'active': activeTab == 'orphants'}">OSM Orphants</span>
 					<span ng-click="activeTab = 'routes'"   ng-class="{'active': activeTab == 'routes'}">Routes</span>
 					<span ng-click="activeTab = 'changes'"  ng-class="{'active': activeTab == 'changes'}">Changes</span>
 				</div>
@@ -147,6 +154,14 @@
 							ng-bind="stop.name" 
 							ng-class="{matched: isStopCodeMatch(stop)}"
 							ng-click="selectStop(stop);" ></div>
+					</div>
+				</div>
+			</div>
+
+			<div class="side-content" ng-if="activeTab == 'orphants'">
+				<div class="side-content-scroll">
+					<div ng-repeat="stop in orphantStops" >
+						<div>{{stop.tags.name}}</div>
 					</div>
 				</div>
 			</div>

@@ -62,10 +62,10 @@ public class GTFSMatcherServer {
 			.flag(Flags.Auth.PUBLIC_ROUTE)
 			.method(HttpMethod.POST).method(HttpMethod.GET).noSerialization();
 		
-		server.uri("/{filename}", new StaticAPI())
-			.alias("/")
+		server.regex(".*", new StaticAPI())
 			.flag(Flags.Auth.PUBLIC_ROUTE)
 			.method(HttpMethod.GET).noSerialization();
+		
 		
 		server.bind(serve.getPort());
 		server.awaitShutdown();

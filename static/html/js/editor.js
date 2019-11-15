@@ -1,6 +1,14 @@
-app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'RoutesService', 'OptionsService',
-	'Changeset', 'MyMap', 'MatchTracker', 'DataHolder', 'Template', '$timeout',
-	function($scope, $anchorScroll, stops, routes, options, changeset, mymap, tracker, data, Template, $timeout) {
+import {StopsService, RoutesService, OptionsService} from '/js/api-services.js'
+import MatchTracker from '/js/match-tracker.js'
+import DataHolder from '/js/data-holder.js'
+
+import changeset from '/js/changeset.js'
+import mymap from '/js/map.js';
+
+import parseTemplate from '/js/template.js'
+
+angular.module('gtfsmatch', []).controller('StopsController', ['$scope', '$anchorScroll', '$timeout',
+	function($scope, $anchorScroll, $timeout) {
 	
 	mymap.onCandidateClick(function(stop, candidate) {
 		$scope.$apply(function() {
@@ -29,33 +37,33 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 		}
 	}
 	
-	options.get().then(resp => {
+	OptionsService.get().then(options => {
 		$scope.settings = {
-			namePattern: resp.data.nameTemplate || '',
-			codeTag: resp.data.gtfsRefTag || 'ref'
+			namePattern: options.nameTemplate || '',
+			codeTag: options.gtfsRefTag || 'ref'
 		};
 	});
 	
-	stops.list().then(function(response) {
+	StopsService.list().then(function(stops) {
 		
-		response.data.gtfs.forEach(function(stop) {
+		stops.gtfs.forEach(function(stop) {
 			if (stop.matched) {
-				tracker.setMatched(stop, stop.matched);
+				MatchTracker.setMatched(stop, stop.matched);
 			}
 			mymap.displayStop(stop, showDetails.bind(this, stop), hideDetails.bind(this, stop));
 		});
 		
-		data.trackStops(response.data.gtfs);
+		DataHolder.trackStops(stops.gtfs);
 		
 		changeset.addBBOX(mymap.getBBOX());
 		mymap.fitBounds();
-		$scope.stops = response.data.gtfs;
-		$scope.orphantStops = response.data.orphants;
+		$scope.stops = stops.gtfs;
+		$scope.orphantStops = stops.orphants;
 
-		routes.list().then(function(response) {
-			$scope.routes = response.data.routes;
-			$scope.orphantOSMRoutes = response.data.orphants;
-			$scope.osmRoutesData = response.data.data;
+		RoutesService.list().then(function(routes) {
+			$scope.routes = routes.routes;
+			$scope.orphantOSMRoutes = routes.orphants;
+			$scope.osmRoutesData = routes.data;
 		});
 	});
 	
@@ -68,14 +76,14 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 	};
 	
 	$scope.assignMatched = function(stop, candidate) {
-		var parent = tracker.gtfs4OSM(candidate);
+		var parent = MatchTracker.gtfs4OSM(candidate);
 		if (parent && !confirm('This osm node already assigned to ' + 
 				parent.code + " " + parent.name + ". " + "" +
 				"Reassign osm obj to new Stop ?")) {
 			return;
 		}
 		stop.matched = candidate;
-		tracker.setMatched(stop, stop.matched);
+		MatchTracker.setMatched(stop, stop.matched);
 		mymap.redrawStop(stop, $scope.settings.codeTag);
 		
 		changeset.track(stop);
@@ -110,7 +118,7 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 	
 	$scope.resetMatch = function(stop) {
 		changeset.untrack(stop);
-		tracker.resetMatched(stop, stop.matched);
+		MatchTracker.resetMatched(stop, stop.matched);
 		stop.matched = null;
 		mymap.redrawStop(stop, $scope.settings.codeTag);
 	};
@@ -143,7 +151,7 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 		
 		// id assigned
 		changeset.create(stop);
-		tracker.setMatched(stop, stop.matched);
+		MatchTracker.setMatched(stop, stop.matched);
 		
 		mymap.redrawStop(stop, $scope.settings.codeTag);
 	};
@@ -166,19 +174,27 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 	});
 	
 	$scope.getChangesetXML = function() {
-		changeset.getChangesetXML().then(function(response) {
-			$scope.changesetXML = response.data;
+		changeset.getChangesetXML().then(text => {
+			$scope.changesetXML = text;
 		});
 	};
 	
 	$scope.openJOSM = function() {
-		changeset.openInJOSM();
+		changeset.openInJOSM()
+			.then(response => {
+				if (response.status == 200) {
+					console.log('Opened');
+				}
+			})
+			.catch(err => {
+				alert('Failed to open in JOSM');
+			});
 	};
 	
 	$scope.showTrip = function(trip, route) {
 		let stops = [];
 		trip.stops.forEach((sid) => {
-			stops.push(data.getStop(sid));
+			stops.push(DataHolder.getStop(sid));
 		});
 		mymap.showTrip(stops);
 		$scope.selectRoute(route);
@@ -187,7 +203,7 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 	var nameTemplate = null;
 	function templateName (stop) {
 		if (!nameTemplate) {
-			nameTemplate = Template.parse($scope.settings.namePattern);
+			nameTemplate = parseTemplate($scope.settings.namePattern);
 		}
 		return nameTemplate.render(stop);
 	}
@@ -216,14 +232,14 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 	};
 	
 	$scope.selectStopInRoute = function(stopid, route) {
-		var stop = data.getStop(stopid);
+		var stop = DataHolder.getStop(stopid);
 		$scope.activeTab = 'stops';
 		$scope.selectStop(stop);
 		$scope.showTrip($scope.getTripForStop(stop, route), route);
 	};
 	
 	$scope.isStopMatched = function(stopid) {
-		return !!data.getStop(stopid).matched;
+		return !!DataHolder.getStop(stopid).matched;
 	};
 
 	$scope.selectRoute = function(route) {
@@ -292,10 +308,10 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 		let segments = matchedOSMTrip.members;
 		matchedOSMTrip.members = [];
 		gtfsTrip.stops.forEach((s) => {
-			if(data.getStop(s).matched) {
+			if(DataHolder.getStop(s).matched) {
 				matchedOSMTrip.members.push({
 					type: 'node',
-					ref: data.getStop(s).matched.id,
+					ref: DataHolder.getStop(s).matched.id,
 					role: ''
 				});
 			}	
@@ -329,7 +345,7 @@ app.controller('StopsController', ['$scope', '$anchorScroll', 'StopsService', 'R
 			members: []
 		};
 		trip.stops.forEach(s => {
-			let stop = data.getStop(s);
+			let stop = DataHolder.getStop(s);
 			if (stop.matched) {
 				osmRelation.members.push({
 					ref: stop.matched.id,

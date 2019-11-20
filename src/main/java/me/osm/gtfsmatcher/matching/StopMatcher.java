@@ -31,6 +31,7 @@ import com.vividsolutions.jts.geom.GeometryFactory;
 import com.vividsolutions.jts.geom.Point;
 import com.vividsolutions.jts.index.strtree.STRtree;
 
+import me.osm.gtfsmatcher.matching.OverpassQueryBuilder.OverpassQueryBuilderUnion;
 import me.osm.gtfsmatcher.model.GTFSStop;
 import me.osm.gtfsmatcher.model.GTFSStopsMatch;
 import me.osm.gtfsmatcher.model.OSMObject;
@@ -43,7 +44,14 @@ public class StopMatcher {
 	
 	private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory();
 	private static final String urlBase = "http://overpass-api.de/api/interpreter?data=";
-	private static final String qTemplate = "[out:json][timeout:25];(node[\"highway\"=\"bus_stop\"]({{bbox}}););out meta;>;out meta qt;";
+//	private static final String qTemplate = "[out:json][timeout:25];[bbox:{{bbox}}];"
+//			+ "("
+//			+ "    node[\"highway\"=\"bus_stop\"];"
+//			+ "    node[\"public_transport\"=\"platform\"];"
+//			+ "    way[\"public_transport\"=\"platform\"];"
+//			+ "    node[\"railway\"=\"tram_stop\"];"
+//			+ ");"
+//			+ "out meta;>;out meta qt;";
 	
 	private static final StopsMatcher matcher = new DefaultStopsMatcher();
 	
@@ -144,7 +152,15 @@ public class StopMatcher {
 			
 			osmObject.setTimestamp(element.optString("timestamp", null));
 			
-			osmObject.setTags(element.getJSONObject("tags").toMap());
+			JSONObject tags = element.optJSONObject("tags");
+			if (tags == null) {
+				if ("node".equals(element.optString("type"))) {
+					System.out.println("Empty stop node: " + element);
+				}
+				continue;
+			}
+
+			osmObject.setTags(tags.toMap());
 			
 			if ("node".equals(element.optString("type"))) {
 				osmObject.setLon(element.getDouble("lon"));
@@ -158,7 +174,19 @@ public class StopMatcher {
 	}
 
 	private String getOverpassQ(Envelope env) {
-		String query = qTemplate.replace("{{bbox}}", env.getMinY() + "," + env.getMinX() + "," + env.getMaxY() + "," + env.getMaxX());
+		
+		OverpassQueryBuilderUnion union = OverpassQueryBuilder.union()
+			.addElement("node", "highway", "bus_stop")
+			.addElement("node", "railway", "tram_stop")
+			.addElement("node", "public_transport", "platform");
+		
+		//union.addElement("way",  "public_transport", "platform");
+		
+		Envelope copy = new Envelope(env);
+		copy.expandBy(0.01);
+		
+		String query = OverpassQueryBuilder.builder().addUnion(union).bbox(copy).build();
+		
 		try {
 			return URLEncoder.encode(query, "UTF-8");
 		} catch (UnsupportedEncodingException e) {

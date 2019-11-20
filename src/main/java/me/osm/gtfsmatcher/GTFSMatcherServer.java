@@ -41,13 +41,13 @@ public class GTFSMatcherServer {
 			.name("feature")
 			.flag(Flags.Auth.PUBLIC_ROUTE);
 		
-		server.uri("/regions/{region}.{format}", regionAPI)
-			.method(HttpMethod.DELETE, HttpMethod.PUT,  HttpMethod.GET)
-			.name("feature")
-			.flag(Flags.Auth.PUBLIC_ROUTE);
-		
 		server.uri("/regions/template.{format}", regionAPI)
 			.action("template", HttpMethod.GET)
+			.name("feature")
+			.flag(Flags.Auth.PUBLIC_ROUTE);
+
+		server.uri("/regions/{region}.{format}", regionAPI)
+			.method(HttpMethod.DELETE, HttpMethod.PUT,  HttpMethod.GET)
 			.name("feature")
 			.flag(Flags.Auth.PUBLIC_ROUTE);
 		

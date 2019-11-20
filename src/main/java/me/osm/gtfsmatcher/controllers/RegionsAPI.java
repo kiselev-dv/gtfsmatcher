@@ -62,7 +62,7 @@ public class RegionsAPI {
 			InputStream is = new URL(r.getGtfsSource()).openStream();
 			OutputStream os = new FileOutputStream(path.toFile());
 		) {
-			System.out.println("Start downlod " + r.getGtfsSource());
+			System.out.println("Start downlod " + r.getGtfsSource() + " to " + path.toString());
 			IOUtils.copy(is, os);
 			os.flush();
 			System.out.println(region + " downloaded");

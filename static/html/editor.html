@@ -4,8 +4,9 @@
 <head>
 <meta charset="utf-8">
 <title>GTFS Matcher</title>
-<script
-	src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.2/angular.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+<script src="https://ajax.googleapis.com/ajax/libs/angularjs/1.7.2/angular.min.js"></script>
 
 <script type="module" src="js/editor.js"></script>
 
@@ -112,7 +113,6 @@
 				<div class="tab-selector">
 					<span ng-click="activeTab = 'settings'" ng-class="{'active': activeTab == 'settings'}">Settings</span>
 					<span ng-click="activeTab = 'stops'"    ng-class="{'active': activeTab == 'stops'}">Stops</span>
-					<span ng-click="activeTab = 'orphants'" ng-class="{'active': activeTab == 'orphants'}">OSM Orphants</span>
 					<span ng-click="activeTab = 'routes'"   ng-class="{'active': activeTab == 'routes'}">Routes</span>
 					<span ng-click="activeTab = 'changes'"  ng-class="{'active': activeTab == 'changes'}">Changes</span>
 				</div>
@@ -152,14 +152,6 @@
 							ng-bind="stop.name" 
 							ng-class="{matched: isStopCodeMatch(stop)}"
 							ng-click="selectStop(stop);" ></div>
-					</div>
-				</div>
-			</div>
-
-			<div class="side-content" ng-if="activeTab == 'orphants'">
-				<div class="side-content-scroll">
-					<div ng-repeat="stop in orphantStops" >
-						<div>{{stop.tags.name}}</div>
 					</div>
 				</div>
 			</div>
@@ -205,5 +197,6 @@
 		</div>
 		<div id="mapid" class="map"></div>
 	</div>
+	
 </body>
 </html>

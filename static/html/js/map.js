@@ -179,6 +179,7 @@ function reassignPosition(stop, done) {
 function fitBounds() {
 	var bounds = L.latLngBounds(L.latLng(bbox[1], bbox[0]), L.latLng(bbox[3], bbox[2]));
 	mymap.fitBounds(bounds);
+	mymap.invalidateSize();
 }
 
 function onCandidateClick(callback) {

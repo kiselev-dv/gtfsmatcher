@@ -58,8 +58,7 @@ angular.module('gtfsmatch', []).controller('StopsController', ['$scope', '$ancho
 		changeset.addBBOX(mymap.getBBOX());
 		mymap.fitBounds();
 		$scope.stops = stops.gtfs;
-		$scope.orphantStops = stops.orphants;
-
+		
 		RoutesService.list().then(function(routes) {
 			$scope.routes = routes.routes;
 			$scope.orphantOSMRoutes = routes.orphants;
@@ -374,6 +373,10 @@ angular.module('gtfsmatch', []).controller('StopsController', ['$scope', '$ancho
 
 	$scope.closeSelectedOSMRoute = function() {
 		$scope.selectedOSMRoute = null;
+	};
+	
+	$scope.test = function(evnt) {
+		console.log(evnt);
 	};
 	
 }]);
